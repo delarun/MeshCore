@@ -14,9 +14,9 @@
 #
 # Then:  ./build_openwrt.sh /path/to/openwrt-sdk-...
 #
-# Deploy: scp .pio/build/Native_CH341_companion_wifi_openwrt/program \
+# Deploy: scp .pio/build/Native_CH341_companion_wifi_openwrt/program.stripped \
 #             root@router:/usr/bin/meshcore-companion
-#         ssh root@router 'opkg update && opkg install libusb-1.0 libi2c'
+#         ssh root@router 'opkg update && opkg install libstdcpp libatomic libusb-1.0 libi2c'
 set -e
 
 SDK="$1"
@@ -50,9 +50,10 @@ export TARGET_CFLAGS="-Os"
 export TARGET_CXXFLAGS="-Os"
 export TARGET_LDFLAGS=""
 
-# staging headers/libs; argp-standalone for musl; static libstdc++/libgcc so
-# the router only needs libusb-1.0 + libi2c from opkg
-export PLATFORMIO_BUILD_FLAGS="-I$TARGET/usr/include -L$TARGET/usr/lib -largp -latomic -static-libstdc++ -static-libgcc"
+# staging headers/libs; argp-standalone for musl. libstdc++ stays dynamic:
+# the platform builder passes an explicit -lstdc++, which overrides
+# -static-libstdc++ -- install libstdcpp on the router instead (see above)
+export PLATFORMIO_BUILD_FLAGS="-I$TARGET/usr/include -L$TARGET/usr/lib -largp -latomic"
 
 cd "$(dirname "$0")/../.."
 ${PIO:-pio} run -e "$PIO_ENV"
