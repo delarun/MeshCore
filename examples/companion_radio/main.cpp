@@ -32,6 +32,8 @@ static uint32_t _atoi(const char* sp) {
 #elif defined(ESP32)
   #include <SPIFFS.h>
   DataStore store(SPIFFS, rtc_clock);
+#elif defined(PORTDUINO)
+  DataStore store(PortduinoFS, rtc_clock);
 #endif
 
 #ifdef ESP32
@@ -81,6 +83,13 @@ static uint32_t _atoi(const char* sp) {
 #elif defined(STM32_PLATFORM)
   #include <helpers/ArduinoSerialInterface.h>
   ArduinoSerialInterface serial_interface;
+#elif defined(PORTDUINO)
+  // TCP server on the host's network; the MeshCore app connects via WiFi
+  #include <helpers/portduino/SerialWifiInterface.h>
+  SerialWifiInterface serial_interface;
+  #ifndef TCP_PORT
+    #define TCP_PORT 5000
+  #endif
 #else
   #error "need to define a serial interface"
 #endif
@@ -224,6 +233,12 @@ void setup() {
 #else
   serial_interface.begin(Serial);
 #endif
+  the_mesh.startInterface(serial_interface);
+#elif defined(PORTDUINO)
+  store.begin();
+  the_mesh.begin(false);
+
+  serial_interface.begin(TCP_PORT);
   the_mesh.startInterface(serial_interface);
 #else
   #error "need to define filesystem"

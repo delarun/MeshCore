@@ -51,6 +51,10 @@ void setup() {
   SPIFFS.begin(true);
   fs = &SPIFFS;
   IdentityStore store(SPIFFS, "/identity");
+#elif defined(PORTDUINO)
+  fs = &PortduinoFS;
+  IdentityStore store(PortduinoFS, "/identity");
+  store.begin();
 #else
   #error "need to define filesystem"
 #endif

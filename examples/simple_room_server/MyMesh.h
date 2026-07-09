@@ -9,6 +9,9 @@
   #include <LittleFS.h>
 #elif defined(ESP32)
   #include <SPIFFS.h>
+#elif defined(PORTDUINO)
+  #include <FS.h>
+  #include <PortduinoFS.h>
 #endif
 
 #include <helpers/ArduinoHelpers.h>

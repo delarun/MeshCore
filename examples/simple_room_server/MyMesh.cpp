@@ -124,7 +124,7 @@ mesh::Packet *MyMesh::createSelfAdvert() {
 File MyMesh::openAppend(const char *fname) {
 #if defined(NRF52_PLATFORM)
   return _fs->open(fname, FILE_O_WRITE);
-#elif defined(RP2040_PLATFORM)
+#elif defined(RP2040_PLATFORM) || defined(PORTDUINO)
   return _fs->open(fname, "a");
 #else
   return _fs->open(fname, "a", true);
@@ -751,6 +751,8 @@ bool MyMesh::formatFileSystem() {
   return LittleFS.format();
 #elif defined(ESP32)
   return SPIFFS.format();
+#elif defined(PORTDUINO)
+  return false;   // not supported; run the executable with --erase instead
 #else
 #error "need to implement file system erase"
   return false;
@@ -810,7 +812,7 @@ void MyMesh::saveIdentity(const mesh::LocalIdentity &new_id) {
   IdentityStore store(*_fs, "");
 #elif defined(ESP32)
   IdentityStore store(*_fs, "/identity");
-#elif defined(RP2040_PLATFORM)
+#elif defined(RP2040_PLATFORM) || defined(PORTDUINO)
   IdentityStore store(*_fs, "/identity");
 #else
 #error "need to define saveIdentity()"
