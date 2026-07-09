@@ -5,10 +5,12 @@
 # and target from https://downloads.openwrt.org/releases/<ver>/targets/...):
 #   tar xf openwrt-sdk-*.tar.* && cd openwrt-sdk-*
 #   ./scripts/feeds update base packages
-#   ./scripts/feeds install libusb-1.0 argp-standalone i2c-tools
+#   ./scripts/feeds install libusb-1.0 argp-standalone i2c-tools libuv
 #   make defconfig
 #   make package/libusb/compile package/argp-standalone/compile \
-#        package/i2c-tools/compile -j$(nproc)
+#        package/i2c-tools/compile package/libuv/compile -j$(nproc)
+# (libuv is only needed for headers: the portduino core's AsyncUDP.cpp
+#  includes <uv.h> but nothing links it)
 #
 # Then:  ./build_openwrt.sh /path/to/openwrt-sdk-...
 #
