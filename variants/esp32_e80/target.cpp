@@ -54,10 +54,15 @@ bool radio_init() {
   spi.begin(P_LORA_SCLK, P_LORA_MISO, P_LORA_MOSI);
   int status = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, LORA_TX_POWER, 16, tcxo);
   if (status != RADIOLIB_ERR_NONE) {
-    Serial.print("ERROR: radio init failed: ");
-    Serial.println(status);
-    return false;  // fail
+    // don't return: on USB-CDC consoles (C3/S2) a one-shot message is lost
+    // to port re-enumeration, so keep repeating it
+    while (true) {
+      Serial.print("ERROR: LR1121 radio init failed: ");
+      Serial.println(status);
+      delay(2000);
+    }
   }
+  Serial.println("LR1121 radio init OK");
 
   radio.setCRC(2);
   radio.explicitHeader();
