@@ -4,7 +4,9 @@
 XiaoC3Board board;
 
 #if defined(P_LORA_SCLK)
-  static SPIClass spi;
+  // the C3 has a single usable SPI bus: SPIClass's default (HSPI) doesn't
+  // exist there and silently yields a dead bus -- use FSPI explicitly
+  static SPIClass spi(FSPI);
   RADIO_CLASS radio = new Module(P_LORA_NSS, P_LORA_DIO_1, P_LORA_RESET, P_LORA_BUSY, spi);
 #else
   RADIO_CLASS radio = new Module(P_LORA_NSS, P_LORA_DIO_1, P_LORA_RESET, P_LORA_BUSY);

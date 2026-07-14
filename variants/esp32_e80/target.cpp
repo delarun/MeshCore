@@ -3,7 +3,13 @@
 
 ESP32Board board;
 
-static SPIClass spi;
+#if CONFIG_IDF_TARGET_ESP32C3
+  // the C3 has a single usable SPI bus: SPIClass's default (HSPI) doesn't
+  // exist there and silently yields a dead bus -- use FSPI explicitly
+  static SPIClass spi(FSPI);
+#else
+  static SPIClass spi;
+#endif
 RADIO_CLASS radio = new Module(P_LORA_NSS, P_LORA_DIO_1, P_LORA_RESET, P_LORA_BUSY, spi);
 
 WRAPPER_CLASS radio_driver(radio, board);
@@ -53,10 +59,9 @@ bool radio_init() {
 
   spi.begin(P_LORA_SCLK, P_LORA_MISO, P_LORA_MOSI);
   int status = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, LORA_TX_POWER, 16, tcxo);
-  // as with CustomSX1262: -706/-707 during init usually means there is no
-  // TCXO on this module -- retry in crystal mode
+  // as with CustomSX1262: -706/-707 during init can mean there is no TCXO
+  // on this module population -- retry in crystal mode
   if (status == RADIOLIB_ERR_SPI_CMD_FAILED || status == RADIOLIB_ERR_SPI_CMD_INVALID) {
-    Serial.println("LR1121: TCXO init failed, retrying in XTAL mode");
     tcxo = 0.0f;
     status = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, LORA_TX_POWER, 16, tcxo);
   }
