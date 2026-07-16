@@ -27,6 +27,64 @@ SensorManager sensors;
   #define LORA_CR 5
 #endif
 
+// hardware bring-up diagnostics; enable with:
+//   PLATFORMIO_BUILD_FLAGS="-D E80_BRINGUP_DIAG" pio run -e <env> -t upload
+#ifdef E80_BRINGUP_DIAG
+static uint8_t bb_xfer(uint8_t out) {
+  uint8_t in = 0;
+  for (int i = 7; i >= 0; i--) {
+    digitalWrite(P_LORA_MOSI, (out >> i) & 1);
+    delayMicroseconds(2);
+    digitalWrite(P_LORA_SCLK, HIGH);
+    delayMicroseconds(2);
+    in = (in << 1) | (digitalRead(P_LORA_MISO) ? 1 : 0);
+    digitalWrite(P_LORA_SCLK, LOW);
+    delayMicroseconds(2);
+  }
+  return in;
+}
+
+static void e80_diag() {
+  for (int i = 5; i > 0; i--) {
+    Serial.printf("E80 diag in %d...\n", i);
+    delay(1000);
+  }
+
+  pinMode(P_LORA_NSS, OUTPUT);
+  digitalWrite(P_LORA_NSS, HIGH);
+  pinMode(P_LORA_SCLK, OUTPUT);
+  digitalWrite(P_LORA_SCLK, LOW);
+  pinMode(P_LORA_MOSI, OUTPUT);
+  pinMode(P_LORA_MISO, INPUT);
+  pinMode(P_LORA_BUSY, INPUT);
+  pinMode(P_LORA_RESET, OUTPUT);
+
+  digitalWrite(P_LORA_RESET, LOW);
+  delay(2);
+  int in_reset = digitalRead(P_LORA_BUSY);
+  digitalWrite(P_LORA_RESET, HIGH);
+  delayMicroseconds(300);
+  int boot = digitalRead(P_LORA_BUSY);
+  delay(300);
+  int idle = digitalRead(P_LORA_BUSY);
+  Serial.printf("BUSY: in-reset=%d at-boot=%d idle=%d (want x/1/0; constant value = check BUSY or NRST wire)\n",
+                in_reset, boot, idle);
+
+  // LR11x0 GetVersion (0x0101): command transaction, BUSY handshake,
+  // then the response comes in a second transaction
+  digitalWrite(P_LORA_NSS, LOW);
+  bb_xfer(0x01); bb_xfer(0x01);
+  digitalWrite(P_LORA_NSS, HIGH);
+  for (int i = 0; i < 1000 && digitalRead(P_LORA_BUSY); i++) delayMicroseconds(10);
+  uint8_t r[5];
+  digitalWrite(P_LORA_NSS, LOW);
+  for (int i = 0; i < 5; i++) r[i] = bb_xfer(0x00);
+  digitalWrite(P_LORA_NSS, HIGH);
+  Serial.printf("GetVersion(bitbang): stat1=%02X hw=%02X device=%02X fw=%u.%u\n", r[0], r[1], r[2], r[3], r[4]);
+  Serial.println("  (device 0x03 = LR1121 OK; all 00 = MISO stuck low/SPI dead; all FF or random = MISO floating)");
+}
+#endif
+
 // E80-900M2213S RF switch: does NOT follow the Semtech reference design.
 // DIO5 -> RFSW0_V1, DIO6 -> RFSW1_V2, DIO7 is not connected on the module
 // (so no GNSS/WiFi scanning). See footnote #3 at
@@ -57,6 +115,9 @@ bool radio_init() {
   float tcxo = 1.8f;
 #endif
 
+#ifdef E80_BRINGUP_DIAG
+  e80_diag();
+#endif
   spi.begin(P_LORA_SCLK, P_LORA_MISO, P_LORA_MOSI);
   int status = radio.begin(LORA_FREQ, LORA_BW, LORA_SF, LORA_CR, RADIOLIB_LR11X0_LORA_SYNC_WORD_PRIVATE, LORA_TX_POWER, 16, tcxo);
   // as with CustomSX1262: -706/-707 during init can mean there is no TCXO
