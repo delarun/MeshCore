@@ -82,6 +82,19 @@ static void e80_diag() {
   digitalWrite(P_LORA_NSS, HIGH);
   Serial.printf("GetVersion(bitbang): stat1=%02X hw=%02X device=%02X fw=%u.%u\n", r[0], r[1], r[2], r[3], r[4]);
   Serial.println("  (device 0x03 = LR1121 OK; all 00 = MISO stuck low/SPI dead; all FF or random = MISO floating)");
+
+  // harness loopback: only meaningful with the module DISCONNECTED and the
+  // MOSI wire jumpered to the MISO wire at the far (module) end
+  static const uint8_t pat[8] = { 0x00, 0xFF, 0x55, 0xAA, 0xA5, 0x5A, 0x01, 0x80 };
+  uint8_t echo[8];
+  int match = 1;
+  for (int i = 0; i < 8; i++) {
+    echo[i] = bb_xfer(pat[i]);
+    if (echo[i] != pat[i]) match = 0;
+  }
+  Serial.print("loopback echo: ");
+  for (int i = 0; i < 8; i++) Serial.printf("%02X ", echo[i]);
+  Serial.printf("-> %s\n", match ? "MATCH (harness OK)" : "no match (module connected? or harness/GND problem)");
 }
 #endif
 
